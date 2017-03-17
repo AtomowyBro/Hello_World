@@ -18,7 +18,9 @@ public:
 	void Uncover();
 	void change_flague();
 	void info();
-	bool mina();
+	bool isflag();
+	bool iscovered();
+	bool ismine();
 };
 
 field::field()
@@ -44,6 +46,7 @@ public:
 	bool hasMine(int x, int y);
 	int count_mines(int x, int y);
 	void display();
+	void debug_display();
 	void reveal(int x, int y);
 };
 
@@ -57,10 +60,9 @@ int main()
 {
 	srand((0)); //umozliwia losowe rozmieszczenie za karzdym uruchomieniem programu
 	Plansza pole;
-	pole.deploy_mines(5, 1);
-	pole.reveal(0, 0); //popsute
+	pole.deploy_mines(1, 1);
+	pole.reveal(5, 0); //popsute
 	pole.display();
-	cout << pole.count_mines(5, 0) << endl;
 	system("pause");
 	return 0;
 }
@@ -113,7 +115,9 @@ void Plansza::reveal(int x, int y)
 		{
 			for (int j_pom = j;j_pom < j_max;j_pom++) //dzieki i_pom i j_pom jestem w stanie korygowac i ustawiac wczesniej zadana wartosc
 			{
-				tab[x-1+i_pom][y-1+j_pom].Uncover();
+				//tab[x-1+i_pom][y-1+j_pom].Uncover(); //stara opcja 
+				if (tab[x - 1 + i_pom][y - 1 + j_pom].iscovered()) //nowa lepsza jezeli pobliskie pole jest zakryte to rekurenkcyjnie wywoluja ta funkcje na tamtym polu
+					reveal(x - 1 + i_pom, y - 1 + j_pom);
 			}
 		}
 	}
@@ -153,7 +157,7 @@ int Plansza::count_mines(int x, int y)
 	return ile_min;
 }
 
-bool field::mina() //sprawdza czy pole ma mine
+bool field::ismine() //sprawdza czy pole ma mine
 {
 	if (mine)
 		return true;
@@ -163,21 +167,51 @@ bool field::mina() //sprawdza czy pole ma mine
 
 bool Plansza::hasMine(int x, int y) // sprawdza czy konkretne pole ma mine
 {
-	if (tab[x][y].mina())
+	if (tab[x][y].ismine())
 		return true;
 	else
 		return false;
 }
 
-void Plansza::display() //wywietlanie planszy do debugowania
+void Plansza::display() //wywietlanie planszy
+{
+	for (int i = 0;i < M;i++)
+	{
+		for (int j = 0;j < N;j++)
+		{
+			if (tab[i][j].iscovered() && !tab[i][j].isflag()) //gdy pole jest zakryte i nie ma flagi
+				cout << "[.]";
+			else if (tab[i][j].iscovered() && tab[i][j].isflag()) //gdy pole jest zakryte i ma flage
+				cout << "[?]";
+			else if (!tab[i][j].iscovered() && !count_mines(i, j)) //gdy pole jest odkryte i nie ma w poblizu min
+				cout << "[ ]";
+			else if (!tab[i][j].iscovered() && count_mines(i, j) && !hasMine(i, j)) //gdy pole jest odkryte ale w poblizu sa miny
+				cout << "[" << count_mines(i, j) << "]";
+			else if (!tab[i][j].iscovered() && hasMine(i, j)) //gdy pole jest odkryte i ma mine
+				cout << "[x]";
+		}
+		cout << endl;
+	}
+
+}
+
+void Plansza::debug_display()
 {
 	for (int i = 0;i < M;i++)
 	{
 		for (int j = 0;j < N;j++)
 			tab[i][j].info();
-		cout << endl;
 	}
+}
 
+bool field::iscovered() //sprawdzam czy jest zakryte
+{
+	return covered;
+}
+
+bool field::isflag() //sprawdzam czy ma flage
+{
+	return flague;
 }
 
 void Plansza::deploy_mines(int n, bool random)
@@ -196,7 +230,7 @@ void Plansza::deploy_mines(int n, bool random)
 			{
 				for (int j = 0; j < N; j++)
 				{
-					if (n>0 && !tab[i][j].mina()) // jezeli nie ma miny losujemy
+					if (n>0 && !tab[i][j].ismine()) // jezeli nie ma miny losujemy
 						if (rand() % 10 == 0)
 						{
 							tab[i][j].place_mine();
